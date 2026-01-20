@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math.dart' hide Colors;
 import '../models/difference.dart' as diff_model;
 import '../models/image_settings.dart';
 import '../models/resize_handle.dart';
@@ -20,6 +21,10 @@ class DifferencePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // 将原点移动到图片中心
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+
     final defaultPaint = Paint()
       ..color = Colors.red
       ..style = PaintingStyle.stroke
@@ -40,8 +45,15 @@ class DifferencePainter extends CustomPainter {
       final isSelected = diff.id == selectedId;
       final paint = isSelected ? selectedPaint : defaultPaint;
 
+      // 使用中心点构造 Rect
+      final rect = Rect.fromCenter(
+        center: Offset(diff.position.x, diff.position.y),
+        width: diff.size.x,
+        height: diff.size.y,
+      );
+
       // Draw original shape
-      _drawShape(canvas, diff.position, diff.shape, paint);
+      _drawShape(canvas, rect, diff.shape, paint);
 
       // Draw mirrored shape in single image mode
       if (imageSettings.imageMode == ImageMode.single) {
@@ -54,12 +66,12 @@ class DifferencePainter extends CustomPainter {
         } else {
           currentMirrorPaint = mirrorPaint;
         }
-        _drawMirroredShape(canvas, diff.position, diff.shape, currentMirrorPaint, size);
+        _drawMirroredShape(canvas, rect, diff.shape, currentMirrorPaint, size);
       }
 
       // Draw resize handles if selected
       if (isSelected) {
-        _drawHandles(canvas, diff.position);
+        _drawHandles(canvas, rect);
       }
     }
 
@@ -80,6 +92,8 @@ class DifferencePainter extends CustomPainter {
         _drawMirroredShape(canvas, currentRect!, 'rectangle', mirroredPreviewPaint, size);
       }
     }
+    
+    canvas.restore();
   }
 
   void _drawShape(Canvas canvas, Rect rect, String shape, Paint paint) {
@@ -93,41 +107,45 @@ class DifferencePainter extends CustomPainter {
   void _drawMirroredShape(Canvas canvas, Rect rect, String shape, Paint paint, Size canvasSize) {
     if (imageSettings.splitMode == null || imageSettings.splitRatio == null || canvasSize.isEmpty) return;
 
-    final offsetX = imageSettings.offsetX;
-    final offsetY = imageSettings.offsetY;
+    final offset = imageSettings.offset ?? Vector2.zero();
+
+    final halfWidth = canvasSize.width / 2;
+    final halfHeight = canvasSize.height / 2;
 
     if (imageSettings.splitMode == SplitMode.horizontal) {
-      final splitX = canvasSize.width * imageSettings.splitRatio!;
+      final splitX = -halfWidth + canvasSize.width * imageSettings.splitRatio!;
 
-      final leftPanel = Rect.fromLTWH(0, 0, splitX, canvasSize.height);
-      final rightPanel = Rect.fromLTWH(splitX, 0, canvasSize.width - splitX, canvasSize.height);
+      final leftPanel = Rect.fromLTWH(-halfWidth, -halfHeight, splitX + halfWidth, canvasSize.height);
+      final rightPanel = Rect.fromLTWH(splitX, -halfHeight, halfWidth - splitX, canvasSize.height);
 
       final leftPart = rect.intersect(leftPanel);
       final rightPart = rect.intersect(rightPanel);
 
       if (!leftPart.isEmpty) {
-        _drawShape(canvas, leftPart.translate(splitX + offsetX, 0 + offsetY), shape, paint);
+        _drawShape(canvas, leftPart.translate(canvasSize.width * imageSettings.splitRatio! + offset.x, 0 + offset.y), shape, paint);
       }
 
       if (!rightPart.isEmpty) {
-        _drawShape(canvas, rightPart.translate(-splitX + offsetX, 0 + offsetY), shape, paint);
+        _drawShape(canvas, rightPart.translate(-canvasSize.width * imageSettings.splitRatio! - offset.x, 0 + offset.y), shape, paint);
       }
 
     } else { // Vertical split
-      final splitY = canvasSize.height * imageSettings.splitRatio!;
+      final splitY = -halfHeight + canvasSize.height * imageSettings.splitRatio!;
 
-      final topPanel = Rect.fromLTWH(0, 0, canvasSize.width, splitY);
-      final bottomPanel = Rect.fromLTWH(0, splitY, canvasSize.width, canvasSize.height - splitY);
+      final topPanel = Rect.fromLTWH(-halfWidth, -halfHeight, canvasSize.width, splitY + halfHeight);
+      final bottomPanel = Rect.fromLTWH(-halfWidth, splitY, canvasSize.width, halfHeight - splitY);
 
       final topPart = rect.intersect(topPanel);
       final bottomPart = rect.intersect(bottomPanel);
 
       if (!topPart.isEmpty) {
-        _drawShape(canvas, topPart.translate(0 + offsetX, splitY + offsetY), shape, paint);
+        _drawShape(canvas, topPart.translate(0 + offset.x, canvasSize.height * imageSettings.splitRatio! + offset.y), shape, paint);
+
       }
 
       if (!bottomPart.isEmpty) {
-        _drawShape(canvas, bottomPart.translate(0 + offsetX, -splitY + offsetY), shape, paint);
+        _drawShape(canvas, bottomPart.translate(0 + offset.x, -canvasSize.height * imageSettings.splitRatio! + offset.y), shape, paint);
+
       }
     }
   }

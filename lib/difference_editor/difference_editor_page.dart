@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vector_math/vector_math.dart' hide Colors;
 import 'bloc/editor_cubit.dart';
 import 'bloc/editor_state.dart';
 import 'models/difference.dart';
@@ -174,8 +175,8 @@ class DifferenceEditorView extends StatelessWidget {
           child: ListTile(
             title: Text('ID: ${diff.id.substring(0, 8)}...'),
             subtitle: Text(
-              'Pos: (${diff.position.left.toStringAsFixed(1)}, ${diff.position.top.toStringAsFixed(1)})\n'
-              'Size: (${diff.position.width.toStringAsFixed(1)} x ${diff.position.height.toStringAsFixed(1)})',
+              'Pos: (${diff.position.x.toStringAsFixed(1)}, ${diff.position.y.toStringAsFixed(1)})\n'
+              'Size: (${diff.size.x.toStringAsFixed(1)} x ${diff.size.y.toStringAsFixed(1)})',
             ),
             onTap: () {
               context.read<EditorCubit>().selectDifference(diff.id);
@@ -189,8 +190,8 @@ class DifferenceEditorView extends StatelessWidget {
 
   Widget _buildImageSettings(BuildContext context, ImageSettings settings) {
     // Create controllers and initialize them to avoid issues during build.
-    final offsetXController = TextEditingController(text: settings.offsetX.toString());
-    final offsetYController = TextEditingController(text: settings.offsetY.toString());
+    final offsetXController = TextEditingController(text: settings.offset?.x.toString() ?? '0.0');
+    final offsetYController = TextEditingController(text: settings.offset?.y.toString() ?? '0.0');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,7 +248,7 @@ class DifferenceEditorView extends StatelessWidget {
                 onFieldSubmitted: (value) {
                   final double? val = double.tryParse(value);
                   if (val != null) {
-                    context.read<EditorCubit>().updateImageSettings(settings.copyWith(offsetX: val));
+                    context.read<EditorCubit>().updateImageSettings(settings.copyWith(offset: Vector2(val, settings.offset?.y ?? 0.0)));
                   }
                 },
               ),
@@ -264,7 +265,7 @@ class DifferenceEditorView extends StatelessWidget {
                 onFieldSubmitted: (value) {
                   final double? val = double.tryParse(value);
                   if (val != null) {
-                    context.read<EditorCubit>().updateImageSettings(settings.copyWith(offsetY: val));
+                    context.read<EditorCubit>().updateImageSettings(settings.copyWith(offset: Vector2(settings.offset?.x ?? 0.0, val)));
                   }
                 },
               ),

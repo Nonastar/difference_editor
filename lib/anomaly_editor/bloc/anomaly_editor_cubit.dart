@@ -144,12 +144,12 @@ class AnomalyEditorCubit extends Cubit<AnomalyEditorState> {
             'imageName': anomaly.imageName,
             'imagePath': anomaly.imagePath,
             'position': {
-              'dx': anomaly.position.dx,
-              'dy': anomaly.position.dy,
+              'x': anomaly.position.dx.floor(),
+              'y': anomaly.position.dy.floor(),
             },
             'size': {
-              'width': anomaly.size.width,
-              'height': anomaly.size.height,
+              'width': anomaly.size.width.floor(),
+              'height': anomaly.size.height.floor(),
             },
           };
         }).toList(),

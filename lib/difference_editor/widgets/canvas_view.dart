@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vector_math/vector_math.dart' as vector;
 import '../bloc/editor_cubit.dart';
 import '../bloc/editor_state.dart';
 import '../models/difference.dart' as diff_model;
@@ -109,6 +110,15 @@ class _CanvasViewState extends State<CanvasView> {
     });
   }
 
+  Offset _getCenterOffset() {
+    if (widget.imageSettings.imageMode == ImageMode.single && _singleImage != null) {
+      return Offset(_singleImage!.width / 2, _singleImage!.height / 2);
+    } else if (widget.imageSettings.imageMode == ImageMode.double && _doubleImageSize != null) {
+      return Offset(_doubleImageSize!.width / 2, _doubleImageSize!.height / 2);
+    }
+    return Offset.zero;
+  }
+
   void _autoFitImage(BoxConstraints constraints) {
     Size? imageSize;
     if (widget.imageSettings.imageMode == ImageMode.single && _singleImage != null) {
@@ -143,8 +153,13 @@ class _CanvasViewState extends State<CanvasView> {
     try {
       final diff = widget.differences.firstWhere((d) => d.id == selectedId);
       final scale = _transformationController.value.getMaxScaleOnAxis();
+      final rect = Rect.fromCenter(
+        center: Offset(diff.position.x, diff.position.y),
+        width: diff.size.x,
+        height: diff.size.y,
+      );
       for (final handle in HandlePosition.values) {
-        final handleRect = getHandleRect(diff.position, handle, scale);
+        final handleRect = getHandleRect(rect, handle, scale);
         if (handleRect.contains(position)) {
           return handle;
         }
@@ -159,7 +174,12 @@ class _CanvasViewState extends State<CanvasView> {
   String? _hittest(Offset position) {
     // 反向迭代以正确选择绘制在顶部的项目。
     for (final diff in widget.differences.reversed) {
-      if (diff.position.contains(position)) {
+      final rect = Rect.fromCenter(
+        center: Offset(diff.position.x, diff.position.y),
+        width: diff.size.x,
+        height: diff.size.y,
+      );
+      if (rect.contains(position)) {
         return diff.id;
       }
     }
@@ -203,14 +223,19 @@ class _CanvasViewState extends State<CanvasView> {
             behavior: HitTestBehavior.translucent,
             onPointerDown: (event) {
                _handleRightClick(event);
-              final scenePos = _transformationController.toScene(event.localPosition);
+              final scenePos = _transformationController.toScene(event.localPosition) - _getCenterOffset();
               if (editorState.selectedTool == DrawingTool.select) {
                 final handle = _hittestHandles(scenePos, editorState.selectedDifferenceId);
                 if (handle != null) {
                   setState(() {
                     _resizingHandle = handle;
                     _startPan = scenePos;
-                    _initialResizeRect = widget.differences.firstWhere((d) => d.id == editorState.selectedDifferenceId).position;
+                    final diff = widget.differences.firstWhere((d) => d.id == editorState.selectedDifferenceId);
+                    _initialResizeRect = Rect.fromCenter(
+                      center: Offset(diff.position.x, diff.position.y),
+                      width: diff.size.x,
+                      height: diff.size.y,
+                    );
                   });
                   return;
                 }
@@ -220,7 +245,7 @@ class _CanvasViewState extends State<CanvasView> {
             onPointerUp: (event) {
               if (editorState.selectedTool == DrawingTool.select && _resizingHandle == null) {
                 final viewportPos = _getCorrectedLocalPosition(event.localPosition, constraints);
-                final scenePos = _transformationController.toScene(viewportPos);
+                final scenePos = _transformationController.toScene(viewportPos) - _getCenterOffset();
                 final selectedId = _hittest(scenePos);
                 editorCubit.selectDifference(selectedId);
               }
@@ -269,7 +294,7 @@ class _CanvasViewState extends State<CanvasView> {
         if (tool == DrawingTool.pan || _resizingHandle != null) return;
 
         final viewportPos = _getCorrectedLocalPosition(details.localFocalPoint, constraints);
-        final scenePos = _transformationController.toScene(viewportPos);
+        final scenePos = _transformationController.toScene(viewportPos) - _getCenterOffset();
 
         if (tool == DrawingTool.circle || tool == DrawingTool.rectangle) {
           setState(() => _startPan = scenePos);
@@ -291,7 +316,7 @@ class _CanvasViewState extends State<CanvasView> {
 
         final tool = editorState.selectedTool;
         final viewportPos = _getCorrectedLocalPosition(details.localFocalPoint, constraints);
-        final scenePos = _transformationController.toScene(viewportPos);
+        final scenePos = _transformationController.toScene(viewportPos) - _getCenterOffset();
 
         if (_resizingHandle != null) {
           // 调整大小的逻辑
@@ -333,13 +358,18 @@ class _CanvasViewState extends State<CanvasView> {
           }
           final newRect = Rect.fromLTRB(left, top, right, bottom);
           final selectedDiff = widget.differences.firstWhere((d) => d.id == editorState.selectedDifferenceId);
-          editorCubit.updateDifference(selectedDiff.copyWith(position: newRect));
+          editorCubit.updateDifference(selectedDiff.copyWith(
+            position: vector.Vector2(newRect.center.dx, newRect.center.dy),
+            size: vector.Vector2(newRect.width, newRect.height),
+          ));
 
         } else if (tool == DrawingTool.circle || tool == DrawingTool.rectangle) {
           setState(() => _endPan = scenePos);
         } else if (tool == DrawingTool.select && _movingDifference != null) {
           final delta = scenePos - _startPan!;
-          editorCubit.updateDifference(_movingDifference!.copyWith(position: _movingDifference!.position.shift(delta)));
+          final currentPos = _movingDifference!.position;
+          final newPos = vector.Vector2(currentPos.x + delta.dx, currentPos.y + delta.dy);
+          editorCubit.updateDifference(_movingDifference!.copyWith(position: newPos));
         }
       },
       onInteractionEnd: (details) {
@@ -348,9 +378,11 @@ class _CanvasViewState extends State<CanvasView> {
           // 完成调整大小
         } else if ((tool == DrawingTool.circle || tool == DrawingTool.rectangle) && _startPan != null && _endPan != null) {
           final rect = Rect.fromPoints(_startPan!, _endPan!);
+          if (rect.width <= 0 || rect.height <= 0) return;
           editorCubit.addDifference(diff_model.Difference(
-            id: _uuid.v4(),
-            position: rect,
+            id: _uuid.v4().substring(0, 8),
+            position: vector.Vector2(rect.center.dx, rect.center.dy),
+            size: vector.Vector2(rect.width, rect.height),
             shape: tool == DrawingTool.circle ? 'circle' : 'rectangle',
           ));
         }

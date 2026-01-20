@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vector_math/vector_math.dart' as vector;
 import '../bloc/editor_cubit.dart';
 import '../models/difference.dart';
 
@@ -38,22 +39,25 @@ class _DifferenceEditorState extends State<DifferenceEditor> {
   }
 
   void _updateControllers(Difference difference) {
-    _xController.text = difference.position.left.toStringAsFixed(2);
-    _yController.text = difference.position.top.toStringAsFixed(2);
-    _wController.text = difference.position.width.toStringAsFixed(2);
-    _hController.text = difference.position.height.toStringAsFixed(2);
+    _xController.text = difference.position.x.toStringAsFixed(2);
+    _yController.text = difference.position.y.toStringAsFixed(2);
+    _wController.text = difference.size.x.toStringAsFixed(2);
+    _hController.text = difference.size.y.toStringAsFixed(2);
   }
 
   void _onValueChanged() {
-    final left = double.tryParse(_xController.text) ?? widget.difference.position.left;
-    final top = double.tryParse(_yController.text) ?? widget.difference.position.top;
-    final width = double.tryParse(_wController.text) ?? widget.difference.position.width;
-    final height = double.tryParse(_hController.text) ?? widget.difference.position.height;
+    final x = double.tryParse(_xController.text) ?? widget.difference.position.x;
+    final y = double.tryParse(_yController.text) ?? widget.difference.position.y;
+    final w = double.tryParse(_wController.text) ?? widget.difference.size.x;
+    final h = double.tryParse(_hController.text) ?? widget.difference.size.y;
 
-    final newRect = Rect.fromLTWH(left, top, width, height);
-
-    if (newRect != widget.difference.position) {
-      context.read<EditorCubit>().updateDifference(widget.difference.copyWith(position: newRect));
+    if (x != widget.difference.position.x ||
+        y != widget.difference.position.y ||
+        w != widget.difference.size.x ||
+        h != widget.difference.size.y) {
+      final newPosition = vector.Vector2(x, y);
+      final newSize = vector.Vector2(w, h);
+      context.read<EditorCubit>().updateDifference(widget.difference.copyWith(position: newPosition, size: newSize));
     }
   }
 

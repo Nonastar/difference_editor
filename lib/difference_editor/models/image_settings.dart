@@ -1,5 +1,8 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:equatable/equatable.dart';
+import 'package:vector_math/vector_math.dart';
+
+import 'type_converters.dart';
 
 part 'image_settings.g.dart';
 
@@ -15,8 +18,8 @@ class ImageSettings extends Equatable {
   final double? splitRatio;
   final String? original;
   final String? modified;
-  final double offsetX;
-  final double offsetY;
+  @Vector2Converter()
+  final Vector2? offset;
 
   const ImageSettings({
     required this.imageMode,
@@ -25,8 +28,7 @@ class ImageSettings extends Equatable {
     this.splitRatio,
     this.original,
     this.modified,
-    this.offsetX = 0.0,
-    this.offsetY = 0.0,
+    this.offset,
   });
 
   ImageSettings copyWith({
@@ -36,8 +38,7 @@ class ImageSettings extends Equatable {
     double? splitRatio,
     String? original,
     String? modified,
-    double? offsetX,
-    double? offsetY,
+    Vector2? offset,
   }) {
     return ImageSettings(
       imageMode: imageMode ?? this.imageMode,
@@ -46,8 +47,7 @@ class ImageSettings extends Equatable {
       splitRatio: splitRatio ?? this.splitRatio,
       original: original ?? this.original,
       modified: modified ?? this.modified,
-      offsetX: offsetX ?? this.offsetX,
-      offsetY: offsetY ?? this.offsetY,
+      offset: offset ?? this.offset,
     );
   }
 
@@ -58,5 +58,5 @@ class ImageSettings extends Equatable {
 
   @override
   List<Object?> get props =>
-      [imageMode, combined, splitMode, splitRatio, original, modified, offsetX, offsetY];
+      [imageMode, combined, splitMode, splitRatio, original, modified, offset];
 }

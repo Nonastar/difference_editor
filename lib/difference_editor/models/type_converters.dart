@@ -1,26 +1,22 @@
-import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:vector_math/vector_math.dart';
 
-class RectConverter implements JsonConverter<Rect, Map<String, dynamic>> {
-  const RectConverter();
+class Vector2Converter implements JsonConverter<Vector2, Map<String, dynamic>> {
+  const Vector2Converter();
 
   @override
-  Rect fromJson(Map<String, dynamic> json) {
-    return Rect.fromLTWH(
-      (json['left'] as num).toDouble(),
-      (json['top'] as num).toDouble(),
-      (json['width'] as num).toDouble(),
-      (json['height'] as num).toDouble(),
+  Vector2 fromJson(Map<String, dynamic> json) {
+    return Vector2(
+      (json['x'] as num).toDouble(),
+      (json['y'] as num).toDouble(),
     );
   }
 
   @override
-  Map<String, dynamic> toJson(Rect rect) {
+  Map<String, dynamic> toJson(Vector2 vector) {
     return {
-      'left': rect.left,
-      'top': rect.top,
-      'width': rect.width,
-      'height': rect.height,
+      'x': double.parse(vector.x.toStringAsFixed(1)),
+      'y': double.parse(vector.y.toStringAsFixed(1)),
     };
   }
 }

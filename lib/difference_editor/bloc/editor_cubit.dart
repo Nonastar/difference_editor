@@ -3,18 +3,18 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart';
+import 'package:vector_math/vector_math.dart';
 import 'editor_state.dart';
 import '../models/difference.dart';
 import '../models/image_settings.dart';
 import '../models/level.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
 
 class EditorCubit extends Cubit<EditorState> {
   EditorCubit() : super(const EditorState());
 
   final _imagePicker = ImagePicker();
-  final _uuid = const Uuid();
 
   Future<void> loadImage() async {
     emit(state.copyWith(status: EditorStatus.loading));
@@ -41,10 +41,37 @@ class EditorCubit extends Cubit<EditorState> {
         );
       }
 
-      final level = LevelData(
-        levelId: _uuid.v4(),
-        images: imageSettings,
-      );
+      LevelData? loadedLevel;
+      try {
+        final path = images.first.path;
+        final jsonPath = setExtension(path, '.json');
+        final jsonFile = File(jsonPath);
+        if (await jsonFile.exists()) {
+          final content = await jsonFile.readAsString();
+          final jsonMap = jsonDecode(content);
+          loadedLevel = LevelData.fromJson(jsonMap);
+        }
+      } catch (e) {
+        print('Error loading JSON: $e');
+      }
+
+      final LevelData level;
+      if (loadedLevel != null) {
+        level = loadedLevel.copyWith(
+          levelId: basenameWithoutExtension(images.first.path),
+          images: loadedLevel.images.copyWith(
+            imageMode: imageSettings.imageMode,
+            combined: imageSettings.combined,
+            original: imageSettings.original,
+            modified: imageSettings.modified,
+          ),
+        );
+      } else {
+        level = LevelData(
+          levelId: basenameWithoutExtension(images.first.path),
+          images: imageSettings,
+        );
+      }
 
       emit(state.copyWith(status: EditorStatus.loaded, level: level, clearSelectedDifference: true));
     } catch (e) {

@@ -6,17 +6,18 @@ part of 'image_settings.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ImageSettings _$ImageSettingsFromJson(Map<String, dynamic> json) =>
+ImageSettings _$ImageSettingsFromJson(Map<String, dynamic> json) =>(
     ImageSettings(
       imageMode: $enumDecode(_$ImageModeEnumMap, json['imageMode']),
       combined: json['combined'] as String?,
       splitMode: $enumDecodeNullable(_$SplitModeEnumMap, json['splitMode']),
-      splitRatio: (json['splitRatio'] as num?)?.toDouble(),
-      original: json['original'] as String?,
-      modified: json['modified'] as String?,
-      offsetX: (json['offsetX'] as num?)?.toDouble() ?? 0.0,
-      offsetY: (json['offsetY'] as num?)?.toDouble() ?? 0.0,
-    );
+      splitRatio: (json['splitRatio'] as num?)?.toDouble() ?? 0.5,
+      original: json['original'] == null ? null : json['original'] as String?,
+      modified: json['modified'] == null ? null : json['modified'] as String?,
+      offset: const Vector2Converter().fromJson(
+        json['offset'] as Map<String, dynamic>,
+      ),
+    ));
 
 Map<String, dynamic> _$ImageSettingsToJson(ImageSettings instance) =>
     <String, dynamic>{
@@ -26,8 +27,7 @@ Map<String, dynamic> _$ImageSettingsToJson(ImageSettings instance) =>
       'splitRatio': instance.splitRatio,
       'original': instance.original,
       'modified': instance.modified,
-      'offsetX': instance.offsetX,
-      'offsetY': instance.offsetY,
+      //'offset': const Vector2Converter().toJson(instance.offset),
     };
 
 const _$ImageModeEnumMap = {

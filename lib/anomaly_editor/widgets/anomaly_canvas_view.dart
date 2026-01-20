@@ -245,8 +245,7 @@ class _AnomalyCanvasViewState extends State<AnomalyCanvasView> {
     }
   }
 
-  Future<void> _showAddAnomalyDialog(
-      BuildContext context, Offset position) async {
+  Future<void> _showAddAnomalyDialog(BuildContext context, Offset position) async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       context

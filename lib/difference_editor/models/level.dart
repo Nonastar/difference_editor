@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:vector_math/vector_math.dart';
 import 'difference.dart';
 import 'image_settings.dart';
+import 'type_converters.dart';
 
 part 'level.g.dart';
 
@@ -20,6 +22,7 @@ class LevelData extends Equatable {
   LevelData copyWith({
     String? levelId,
     ImageSettings? images,
+    Vector2? offset,
     List<Difference>? differences,
   }) {
     return LevelData(
